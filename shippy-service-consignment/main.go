@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
+	pb "github.com/enginewang/shippy/shippy-service-consignment/proto/consignment"
 	"github.com/micro/go-micro/v2"
 	"log"
-	pb "shippy-service-consignment/proto/consignment"
 	"sync"
 )
 

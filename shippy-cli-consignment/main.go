@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"encoding/json"
+	pb "github.com/enginewang/shippy/shippy-service-consignment/proto/consignment"
 	"google.golang.org/grpc"
 	"io/ioutil"
 	"log"
 	"os"
-	pb "shippy-cli-consignment/proto/consignment"
 )
 
 const (
