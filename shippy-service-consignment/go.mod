@@ -3,6 +3,7 @@ module github.com/enginewang/shippy/shippy-service-consignment
 go 1.17
 
 require (
+	github.com/enginewang/shippy/shippy-service-vessel v0.0.0-20220325141126-36171968fe39
 	github.com/golang/protobuf v1.5.2
 	github.com/micro/go-micro/v2 v2.9.1
 	google.golang.org/protobuf v1.28.0

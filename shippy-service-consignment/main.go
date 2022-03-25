@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	pb "github.com/enginewang/shippy/shippy-service-consignment/proto/consignment"
+	vesselProto "github.com/enginewang/shippy/shippy-service-vessel/proto/vessel"
 	"github.com/micro/go-micro/v2"
 	"log"
-	"sync"
 )
 
 type repository interface {
@@ -15,21 +15,18 @@ type repository interface {
 
 // Repository - Dummy repository, this simulates the use of a datastore
 // of some kind. We'll replace this with a real implementation later on.
-type Repository struct {
-	mu           sync.RWMutex
+type ConsignmentRepository struct {
 	consignments []*pb.Consignment
 }
 
 // Create a new consignment
-func (repo *Repository) Create(consignment *pb.Consignment) (*pb.Consignment, error) {
-	repo.mu.Lock()
+func (repo *ConsignmentRepository) Create(consignment *pb.Consignment) (*pb.Consignment, error) {
 	updated := append(repo.consignments, consignment)
 	repo.consignments = updated
-	repo.mu.Unlock()
 	return consignment, nil
 }
 
-func (repo *Repository) GetAll() []*pb.Consignment {
+func (repo *ConsignmentRepository) GetAll() []*pb.Consignment {
 	return repo.consignments
 }
 
@@ -38,14 +35,20 @@ func (repo *Repository) GetAll() []*pb.Consignment {
 // in the generated code itself for the exact method signatures etc
 // to give you a better idea.
 type consignmentService struct {
-	repo repository
+	repo         repository
+	vesselClient vesselProto.VesselService
 }
 
 // CreateConsignment - we created just one method on our service,
 // which is a create method, which takes a context and a request as an
 // argument, these are handled by the gRPC server.
 func (s *consignmentService) CreateConsignment(ctx context.Context, req *pb.Consignment, res *pb.Response) error {
-
+	vesselResponse, err := s.vesselClient.FindAvailable(context.Background(), &vesselProto.Specification{
+		MaxWeight: req.Weight,
+		Capacity:  int32(len(req.Containers)),
+	})
+	req.VesselId = vesselResponse.Vessel.Id
+	log.Printf("Found vessel: %s \n", vesselResponse.Vessel.Name)
 	// Save our consignment
 	consignment, err := s.repo.Create(req)
 	if err != nil {
@@ -63,13 +66,15 @@ func (s *consignmentService) GetConsignments(ctx context.Context, req *pb.GetReq
 }
 
 func main() {
-	repo := &Repository{}
+	repo := &ConsignmentRepository{}
 	service := micro.NewService(
 		micro.Name("shippy.service.consignment"),
+		micro.Version("lastest"),
 	)
 	service.Init()
+	vesselClient := vesselProto.NewVesselService("shippy.service.vessel", service.Client())
 	if err := pb.RegisterShippingServiceHandler(service.Server(),
-		&consignmentService{repo}); err != nil {
+		&consignmentService{repo, vesselClient}); err != nil {
 		log.Panic(err)
 	}
 	if err := service.Run(); err != nil {
